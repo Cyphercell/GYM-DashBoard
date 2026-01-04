@@ -1,2 +1,241 @@
-hi testing 
-gym project
+from functionstest1 import *
+
+#--------------------------------------------------------------------------------
+#Dashboard  ###########################################################################
+#--------------------------------------------------------------------------------
+
+
+
+st.title("Gym Management Admin Dashboard")
+
+
+menu = ["Home", "Manage Customers", "Manage Trainers", "Add Payment", "Unpaid Members"]
+
+choice = st.sidebar.radio("", menu)
+st.sidebar.markdown("## Pricing Summary")
+st.sidebar.info("""
+**Adults:** ₹1000 / month  
+**Students:** ₹800 / month  
+**Personal Training:** ₹5000 / month
+""")
+
+        
+############################################
+# Home Section
+# ############################################
+if choice == "Home":
+    st.title("Welcome to the Gym Management System")
+    st.markdown("---")
+
+   
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        total_customers = get_total_customers()  
+        st.metric("Total Members", total_customers)
+
+    with col2:
+        total_trainers = get_total_trainers() 
+        st.metric("Total Trainers", total_trainers)
+
+    with col3:
+        total_revenue = get_total_revenue()  
+        st.metric(" Total Revenue of this month", f"{total_revenue:.2f}")
+        
+
+
+
+# --------------------------------------------------------------------------
+# Manage Customers  ########################################################
+# --------------------------------------------------------------------------
+elif choice == "Manage Customers":
+    st.subheader("Manage Customers")
+    tab1, tab2, tab3, tab4 = st.tabs(["Add Customer", "View Customers", "Edit Customer", "Delete Customer"])
+
+    with tab1 :
+        name = st.text_input('Name')
+        age = st.number_input("Age", min_value=1, max_value=120)
+        gender =st.selectbox('gender',['Male','Female','Other'])
+        phone = st.text_input("Phone Number")
+        address = st.text_area("Address")
+        if st.button('Add Customer'):
+            if name and age and gender and phone and address:
+                add_customer(name, age, gender,phone, address)
+                st.success("Customer added successfully!")
+            else:
+                st.error("fill all required fields")
+    with tab2:
+        df = get_all_customers()
+        st.dataframe(df)
+        
+    with tab3:
+        
+        options = get_customer_options()
+        
+        if options:
+            selected = st.selectbox( "Select Customer", options , format_func=lambda x: x[1])
+            cid = selected[0]
+            details = get_customer_by_id(cid)
+            if details:
+
+                name = st.text_input("Name", details[1], key=f"edit_name_{cid}")
+                age = st.number_input("Age", min_value=1, max_value=120, value=details[2], key=f"edit_age_{cid}")
+                gender = st.selectbox(
+                    "Gender",
+                    ["Male", "Female", "Other"],
+                    index=["Male", "Female", "Other"].index(details[3]),
+                    key=f"edit_gender_{cid}"
+                )
+                address = st.text_area("Address", details[4], key=f"edit_address_{cid}")
+                if st.button("Update Customer", key=f"update_btn_{cid}"):
+                    update_customer(cid, name, age, gender, address)
+                    st.session_state["update_success"] = True
+                    st.rerun()
+
+            if st.session_state.get("update_success"):
+                st.success(" Customer updated successfully!")
+                st.session_state["update_success"] = False
+
+
+    with tab4:
+        options = get_customer_options()
+
+        if options:
+            selected = st.selectbox("Select Customer to Delete",options,format_func=lambda x: x[1])
+            cid = selected[0]
+
+            if st.button("Delete Customer", key=f"delete_customer_btn_{cid}"):
+                delete_customer(cid) 
+                st.session_state["delete_success"] = True
+                st.rerun() 
+
+        
+            if st.session_state.get("delete_success"):
+                st.success("Customer deleted successfully!")
+                st.session_state["delete_success"] = False
+        else:
+            st.info("No customers available.")
+
+
+
+# ---------------------------------------------------------------------
+# Manage Trainer #######################################################
+# --------------------------------------------------------------------- 
+    
+elif choice == "Manage Trainers":
+    st.subheader("Manage Trainers")
+    tab1, tab2, tab3, tab4 = st.tabs(["Add Trainer", "View Trainers", "Edit Trainer", "Delete Trainer"])
+
+    with tab1:
+        name = st.text_input('Name')
+        age = st.number_input('Age', min_value=1, max_value=120)
+        gender =st.selectbox('gender',['Male','Female','Other'])
+        address = st.text_area('Address')
+        phone = st.text_input('Phone')
+        salary = st.number_input('Salary', min_value=0)
+        Specialization = st.text_input('Specialization')
+        
+        if st.button('Add Trainer'):
+            if name and age and gender and address and phone and Specialization and salary:
+                add_trainer(name, age, gender ,address, phone, salary,Specialization )
+                st.success("Trainer added successfully!")
+            else:
+                st.error("fill all required fields")
+
+    with tab2:
+        df = get_all_trainers()
+        st.dataframe(df)
+
+    with tab3:
+        options = get_trainer_options()
+        
+        if options:
+            selected = st.selectbox( "Select Trainer", options , format_func=lambda x: x[1])
+            tid = selected[0]
+            details = get_trainer_by_id(tid)
+            
+            if details:
+                name = st.text_input("Name", details[1], key=f"edit_name_{tid}")
+                age = st.number_input("Age", min_value=1, max_value=120, value=details[2], key=f"edit_age_{tid}")
+                gender = st.selectbox(
+                    'gender',
+                    ['Male', 'Female', 'Other'],
+                    index=['Male', 'Female', 'Other'].index(details[3]),    
+                    key=f"edit_gender_{tid}"
+                )   
+                address = st.text_area("Address", details[4], key=f"edit_address_{tid}")
+                phone = st.text_input("Phone", details[5], key=f"edit_phone_{tid}")
+                salary = st.number_input("Salary", min_value=0, value=details[6], key=f"edit_salary_{tid}")
+                specialization = st.text_input("Specialization", details[7], key=f"edit_specialization_{tid}")  
+                
+                if st.button("Update Trainer", key=f"update_trainer_btn_{tid}"):
+                    update_trainer(tid, name, age, gender, address, phone, salary, specialization)
+                    st.session_state["trainer_update_success"] = True
+                    st.rerun()
+                    
+                if st.session_state.get("trainer_update_success"):
+                    st.success(" Trainer updated successfully!")
+                    st.session_state["trainer_update_success"] = False
+            else:
+                st.error("Trainer details not found.")
+
+    with tab4:
+        options = get_trainer_options()  
+    
+        if options:
+            selected = st.selectbox("Select Trainer to Delete", options, format_func=lambda x: x[1])
+            tid = selected[0]  
+    
+            if st.button("Delete Trainer", key=f"delete_trainer_btn_{tid}"):
+                delete_trainer(tid)
+                st.session_state["delete_success"] = True
+                st.rerun()  
+    
+            if st.session_state.get("delete_success"):
+                st.success("Trainer deleted successfully!")
+                st.session_state["delete_success"] = False
+        else:
+            st.info("No trainers available.")
+    
+# -############################--------------------------------------
+# Add Payment ##################################################
+# -----------------------------------------------------------
+elif choice == "Add Payment":
+    st.subheader("Manage Payment")
+    
+    tab1, tab2 = st.tabs(["Add Payment", "View payment list"])
+    with tab1:
+
+        options = get_customer_options()
+        if options:
+            selected = st.selectbox( "Select Customer", options , format_func=lambda x: x[1])
+            cid = selected[0] 
+            amount = st.number_input("Amount", min_value=0.0, format="%.2f", key="add_payment_amount")
+
+            if st.button("Add Payment", key="add_payment_btn"):
+                if amount > 0:
+                    add_payment(cid, amount)
+                    st.session_state["payment_added"] = True
+                    st.rerun()
+                else:
+                    st.error("Amount must be greater than 0.")
+
+            if st.session_state.get("payment_added"):
+                st.success("Payment added successfully!")
+                st.session_state["payment_added"] = False
+
+        else:
+            st.info("No customers available.")
+        
+    with tab2:
+        df = get_all_payments()
+        st.dataframe(df)
+        
+# --------------###########################################################
+# Unpaid Members ##########################################################################
+# -----------------------------######################################################33###
+
+elif choice == "Unpaid Members":
+    st.subheader("Unpaid Members (No Payment This Month)")
+    df = get_unpaid_members()
+    st.dataframe(df)
+
