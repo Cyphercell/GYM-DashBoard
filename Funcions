@@ -1,0 +1,224 @@
+import streamlit as st
+import mysql.connector
+import pandas as pd
+from datetime import datetime
+
+# Database connection function
+def get_db_connection():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",  
+        password="root",  
+        database="gym"
+    )
+
+# -----------------------------
+# Customer Functions
+# -----------------------------
+
+def add_customer(name, age, gender, phone,address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+      
+    query = "INSERT INTO customers (name, age, gender,phone, address, join_date) VALUES (%s, %s, %s, %s, %s, CURDATE())"
+    cursor.execute(query, (name, age, gender,phone, address))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+def get_all_customers():
+    conn = get_db_connection()
+    query = "SELECT  name, age, gender,phone, address, join_date FROM customers"
+    df = pd.read_sql(query, conn)
+    conn.close()
+    return df
+
+def get_customer_by_id(cid):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "SELECT id, name, age, gender, address, join_date FROM customers WHERE id = %s"
+    cursor.execute(query, (cid,))
+    result = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return result
+
+def update_customer(cid, name, age, gender, address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "UPDATE customers SET name=%s, age=%s, gender=%s, address=%s WHERE id=%s"
+    cursor.execute(query, (name, age, gender, address, cid))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+def delete_customer(cid):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("DELETE FROM payments WHERE customer_id=%s", (cid,))
+
+    cursor.execute("DELETE FROM customers WHERE id=%s", (cid,))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+def get_customer_options():
+    """
+     Returns a list of tuples (id, name) for all customers
+    """
+    conn = get_db_connection()
+    query = "SELECT id, name FROM customers"
+    df = pd.read_sql(query, conn)
+    conn.close()
+    
+    return [(row['id'], row['name']) for index, row in df.iterrows()]
+
+######################################################
+# Trainer Functions
+######################################################
+
+def add_trainer(name, age, gender, address, phone, salary, specialization):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "INSERT INTO trainers (name, age, gender, address, phone, salary, specialization) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+    cursor.execute(query, (name, age, gender, address, phone, salary, specialization))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+def get_all_trainers():
+    conn = get_db_connection()
+    query = "SELECT name, age, gender, address, phone, salary, specialization FROM trainers"
+    df = pd.read_sql(query, conn)
+    conn.close()
+    return df
+
+def get_trainer_options():
+    conn = get_db_connection()
+    query = "SELECT id, name FROM trainers"
+    df = pd.read_sql(query, conn)
+    conn.close()
+    
+    return [(row['id'], row['name']) for index, row in df.iterrows()]
+
+
+def get_trainer_by_id(tid):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "SELECT id, name, age, gender, address, phone, salary, specialization FROM trainers WHERE id = %s"
+    cursor.execute(query, (tid,))
+    result = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return result
+
+def update_trainer(tid, name, age, gender, address, phone, salary, specialization):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "UPDATE trainers SET name=%s, age=%s, gender=%s, address=%s, phone=%s, salary=%s, specialization=%s WHERE id=%s"
+    cursor.execute(query, (name, age, gender, address, phone, salary, specialization, tid))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+def delete_trainer(tid):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "DELETE FROM trainers WHERE id=%s"
+    cursor.execute(query, (tid,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    
+# ------------------########################
+# Payment Functions #######################################
+# -------------------##############################
+def add_payment(customer_id, amount):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "INSERT INTO payments (customer_id, amount, payment_date) VALUES (%s, %s, CURDATE())"
+    cursor.execute(query, (customer_id, amount))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+def get_all_payments():
+    conn = get_db_connection()
+    query = """
+        SELECT 
+            c.name AS Customer_Name,
+            c.gender AS Gender,
+            c.address AS Address,
+            p.amount AS Amount,
+            p.payment_date AS Payment_Date
+        FROM payments p JOIN customers c ON p.customer_id = c.id ORDER BY p.payment_date DESC
+    """
+    df = pd.read_sql(query, conn)
+    conn.close()
+    return df
+
+# #############################################################################
+# Unpaid ########################################################################################
+# -#############################################################################################`
+def get_unpaid_members():
+    conn = get_db_connection()
+    query = """
+        SELECT 
+            c.id AS Customer_ID,
+            c.name AS Name,
+        c.gender AS Gender,
+        c.address AS Address
+         FROM customers c
+        WHERE c.id NOT IN (
+            SELECT customer_id 
+            FROM payments 
+            WHERE MONTH(payment_date) = MONTH(CURDATE())
+            AND YEAR(payment_date) = YEAR(CURDATE())
+        )
+        ORDER BY c.name;
+    """
+    df = pd.read_sql(query, conn)
+    conn.close()
+    return df
+
+
+###############################################################################
+#dashboard stats functions
+###############################################################################
+def get_total_customers():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM customers")
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
+
+def get_total_trainers():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM trainers") 
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
+
+def get_total_revenue():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COALESCE(SUM(amount), 0)
+        FROM payments
+        WHERE MONTH(payment_date) = MONTH(CURDATE())
+        AND YEAR(payment_date) = YEAR(CURDATE());
+    """)
+    total = cursor.fetchone()[0]
+    cursor.close()
+    conn.close()
+    return total
+
+
+
+
+
